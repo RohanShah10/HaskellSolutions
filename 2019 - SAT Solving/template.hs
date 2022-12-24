@@ -57,18 +57,26 @@ distribute a b
 
 -- 4 marks
 toNNF :: Formula -> NNF
-toNNF 
-  = undefined
+toNNF (Not (Or f1 f2)) = And (toNNF (Not f1)) (toNNF (Not f2))
+toNNF (Not (And f1 f2)) = Or (toNNF (Not f1)) (toNNF (Not f2))
+toNNF (Not (Not f)) = toNNF f
+toNNF (Not f) = (Not f)
+toNNF (And f1 f2) = And (toNNF f1) (toNNF f2)
+toNNF (Or f1 f2) = Or (toNNF f1) (toNNF f2)
+toNNF (formula) = formula
 
 -- 3 marks
 toCNF :: Formula -> CNF
-toCNF 
-  = undefined
-
+toCNF formula = toCNF' (toNNF formula)
+    where 
+        toCNF' :: Formula -> CNF
+        toCNF' (Or form1 (And form2 form3)) = distribute form1 (And form2 form3)
+        toCNF' (Or (And form1 form2) (form3)) = distribute (And form1 form2) form3
+        toCNF' f = f
+          
 -- 4 marks
 flatten :: CNF -> CNFRep
-flatten 
-  = undefined
+flatten = undefined
 
 --------------------------------------------------------------------------
 -- Part III
