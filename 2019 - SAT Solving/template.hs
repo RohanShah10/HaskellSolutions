@@ -76,8 +76,11 @@ toCNF formula = toCNF' (toNNF formula)
           
 -- 4 marks
 flatten :: CNF -> CNFRep
-flatten = undefined
-
+flatten formula = flatten' formula (idMap formula)
+    where
+        flatten' :: CNF -> IdMap -> CNFRep
+        flatten' (And f1 f2) map = [[lookUp f1 map], [lookUp f2 map]]
+        flatten' (Or f1 f2) map = [[lookUp f1 map, lookUp f2 map]]
 --------------------------------------------------------------------------
 -- Part III
 
