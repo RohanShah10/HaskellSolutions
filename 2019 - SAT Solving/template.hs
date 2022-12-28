@@ -76,18 +76,40 @@ toCNF formula = toCNF' (toNNF formula)
           
 -- 4 marks
 flatten :: CNF -> CNFRep
-flatten formula = flatten' formula (idMap formula)
-    where
-        flatten' :: CNF -> IdMap -> CNFRep
-        flatten' (And f1 f2) map = [[lookUp f1 map], [lookUp f2 map]]
-        flatten' (Or f1 f2) map = [[lookUp f1 map, lookUp f2 map]]
+flatten cnf = flatten' cnf (idMap cnf)
+  where
+    flatten' :: CNF -> IdMap -> CNFRep
+    flatten' (And f1 f2) map = ((flattenClause f1 map) : (flatten' f2 map)) 
+    flatten' f map = [flattenClause f map]
+
+flattenClause :: CNF -> IdMap -> [Int]
+flattenClause (Var id) map = [(lookUp id map)]
+flattenClause (Not (Var id)) map = [(-(lookUp id map))]
+flattenClause (Or f1 f2) map = flattenClause f1 map ++ flattenClause f2 map
 --------------------------------------------------------------------------
 -- Part III
 
 -- 5 marks
 propUnits :: CNFRep -> (CNFRep, [Int])
-propUnits 
-  = undefined
+propUnits [] = ([],[])
+propUnits lst@(x:xs)
+  |null (getUnitClause lst) = propUnits2 lst
+  |otherwise = removeClauses lst (head (getUnitClause lst))
+  where
+    getUnitClause :: CNFRep -> [Int]
+    getUnitClause [] = []
+    getUnitClause(x:xs)
+      |length x == 1 = x
+      |otherwise = getUnitClause xs
+    
+    removeClauses :: CNFRep -> [Int] -> [Int]
+    removeClauses [] _ = []
+    removeClauses lst@(x:xs) item
+      |elem item [x] = removeClauses xs item
+      |otherwise = x ++ removeClauses xs item
+    
+    propUnits2 = undefined
+
 
 -- 4 marks
 dp :: CNFRep -> [[Int]]
