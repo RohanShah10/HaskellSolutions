@@ -61,7 +61,7 @@ eval :: Exp -> State -> Int
 -- Pre: the variables in the expression will all be bound in the given state 
 -- Pre: expressions do not contain phi instructions
 eval (Const f) _ = f
-eval (Var id) state = fromJust(lookup id state)
+eval (Var id) state = (lookUp id state)
 eval (Apply (operator) e1 e2) state = apply (operator) (eval e1 state) (eval e2 state)
 
 -- data Statement = Assign Id Exp |
@@ -73,10 +73,11 @@ execStatement :: Statement -> State -> State
 execStatement (Assign id exp) state = update (id, (eval exp state)) state
 execStatement (If (exp) block1 block2) state
   |eval exp state == 1 = execBlock block1 state
-  |eval exp state == 0 = execBlock block2 state
-execStatement (DoWhile block exp) state
-  |eval exp state == 1 = execBlock block state
-  |eval exp state == 0 = execBlock block state ++ []--i think this is a while loop
+  |otherwise = execBlock block2 state
+execStatement dw@(DoWhile block exp) state
+  |eval exp state == 1 = execStatement dw  (execBlock block state) 
+  |otherwise = execBlock block state
+
 
 execBlock :: Block -> State -> State
 execBlock [] _ = []
@@ -95,13 +96,30 @@ applyPropagate (name, args, body)
 
 foldConst :: Exp -> Exp
 -- Pre: the expression is in SSA form
-foldConst 
-  = undefined
+foldConst (Phi (Const a) (Const b))
+  |a == b = Const a
+foldConst (Apply (operator) (Const a) (Const b)) = Const (apply (operator) a b)
+foldConst (Apply Add (Const 0) (Var a)) = Var a
+foldConst (Apply Add (Var a) (Const 0)) = Var a
+foldConst a = a
+
+-- data Exp = Const Int | Var Id | Apply Op Exp Exp | Phi Exp Exp
+--          deriving (Eq, Show)
+
 
 sub :: Id -> Int -> Exp -> Exp
 -- Pre: the expression is in SSA form
-sub 
-  = undefined
+sub id int (Apply (op) e1 e2) = foldConst (Apply (op) (replacer id int e1) (replacer id int e2))
+sub id int (Phi e1 e2) = foldConst (Phi (replacer id int e1) (replacer id int e2))
+
+replacer :: Id -> Int -> Exp -> Exp
+replacer (id) (int) (Const a)
+  | read id == a = Const int
+  |otherwise = Const a
+replacer (id) (int) (Var a)
+  |id == a = Const int
+  |otherwise = Var a
+replacer id int a = a
 
 -- Use (by uncommenting) any of the following, as you see fit...
 -- type Worklist = [(Id, Int)]
