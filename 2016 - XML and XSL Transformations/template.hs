@@ -46,37 +46,53 @@ printXMLs
 -- Part I
 
 skipSpace :: String -> String
-skipSpace "" = ""
-skipSpace (s:ss)
-  |s == '\n' = skipSpace ss
-  |s == ' ' = skipSpace ss
-  |otherwise = (s:ss)
+skipSpace = dropWhile isSpace
 
+-- type Name = String
+
+-- type Attributes = [(Name, String)]
+
+-- data XML = Null | Text String | Element Name Attributes [XML]
+--          deriving (Eq, Show)
 
 getAttribute :: String -> XML -> String
-getAttribute [] _ = ""
 getAttribute str Null = ""
-getAttribute str (Element str attrs lst)
-
+getAttribute str (Text s) = ""
+getAttribute str (Element name attrs []) = ""
+getAttribute str xml@(Element name attrs lst@(x:xs))
+    |elem str (map fst attrs) = fromJust (lookup str attrs)
+    |otherwise = concatMap (\y -> getAttribute str y) (lst) 
 
 
 getChildren :: String -> XML -> [XML]
-getChildren 
-  = undefined
+getChildren str Null = []
+getChildren str (Text s) = []
+getChildren str (Element name attrs lst@(x:xs))
+    |str == name = [Element name attrs lst] ++ concatMap (\y -> getChildren str y) lst
+    |otherwise = concatMap (\y -> getChildren str y) lst 
 
 getChild :: String -> XML -> XML
-getChild 
-  = undefined
+getChild str xml = getChild' (getChildren str xml)
+    where 
+        getChild' :: [XML] -> XML
+        getChild' [] = Text ""
+        getChild' lst = head lst
 
 addChild :: XML -> XML -> XML
 -- Pre: the second argument is an Element
-addChild 
-  = undefined
+addChild x (Element name attrs lst) = Element name attrs (lst ++ [x])
+
+-- data XML = Null | Text String | Element Name Attributes [XML]
+--          deriving (Eq, Show)
 
 getValue :: XML -> XML
-getValue 
-  = undefined
-
+getValue a@(Element name attrs lst) = Text ((getValue' a ))
+    where
+        getValue' :: XML -> String
+        getValue' Null = ""
+        getValue' (Text str) = str
+        getValue' (Element name attrs []) = ""
+        getValue' (Element name attrs lst) = concatMap (getValue') (lst)
 -------------------------------------------------------------------------
 -- Part II
 
@@ -97,19 +113,30 @@ sentinel
 
 addText :: String -> Stack -> Stack
 -- Pre: There is at least one Element on the stack
-addText 
-  = undefined
+addText str stack = (Text str) : stack
 
 popAndAdd :: Stack -> Stack
 -- Pre: There are at least two Elements on the stack
-popAndAdd 
-  = undefined
+popAndAdd (x1:x2:xs) = (addChild x1 x2) : xs
 
 parseAttributes :: String -> (Attributes, String)
 -- Pre: The XML attributes string is well-formed
-parseAttributes 
-  = undefined
+parseAttributes str = parseAttributes' str []
 
+--type Attributes = [(Name, String)]
+
+parseAttributes' :: String -> Attributes -> (Attributes, String)
+parseAttributes' inp@('>':xs) (attrs) = (attrs, tail skipped)
+    where 
+        skipped = skipSpace inp
+
+parseAttributes' inp@('"':xs) (attrs) = parseAttributes' (tail (dropWhile (/='"') (tail skipped))) (attrs ++ [(name, takeWhile (/='"') (tail skipped))])
+    where 
+        skipped = skipSpace inp
+        (name, rest) = parseName (tail inp)
+
+parseAttributes' inp@(x:xs) (attrs) = parseAttributes' (xs) (attrs) 
+        
 parse :: String -> XML
 -- Pre: The XML string is well-formed
 parse s
